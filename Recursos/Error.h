@@ -1,6 +1,7 @@
 /**
- * @author Fernández Nicolás (niferz@hotmail.com)
+ * @author Fernández Nicolás (nicofernandez@alumnos.unc.edu.ar)
  * @date Abril, 2016
+ * @version 0.5.2017 beta
  *
  * @brief Impresión de errores y cerrado del programa
  * 
@@ -15,6 +16,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
+///@todo ver assert
 
 /**
  * @brief Interpreta valores negativos como la ocurrencia de un error,

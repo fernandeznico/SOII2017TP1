@@ -1,6 +1,7 @@
 /**
- * @author Fernández Nicolás (niferz@hotmail.com)
+ * @author Fernández Nicolás (nicofernandez@alumnos.unc.edu.ar)
  * @date Abril, 2016
+ * @version 1.2017 beta
  *
  * @brief Manejo de interfaces de comunicación basadas en sockets
  * 
@@ -157,7 +158,7 @@ int Sockets_Crear_Y_Conectar_Socket_INET_TCP
  * @return numero del socket creado para realizar operaciones afines 
  */
 int Sockets_Crear_Y_Conectar_Socket_INET_UDP
-( struct hostent * server , struct sockaddr_in * dest_addr , int puerto )
+(struct hostent * server , struct sockaddr_in * dest_addr , int puerto)
 {
 	
 	int sockfd;
@@ -177,7 +178,8 @@ int Sockets_Crear_Y_Conectar_Socket_INET_UDP
 	
 }
 
-void Sockets_Si_puerto_es_aleatorio_obtenerlo( int sockfd , int * puerto )
+void Sockets_Si_puerto_es_aleatorio_obtenerlo
+( int sockfd , int * puerto )
 {
 	
 	if( *puerto != 0 )
@@ -209,7 +211,8 @@ int Sockets_Crear_Socket_INET_TCP( int * sockfd , int * puerto )
 	*sockfd = socket( AF_INET , SOCK_STREAM , 0 );
 		if ( *sockfd < 0 ) { 
 			fprintf( stderr ,
-					"ERROR: No se pudo crear la conexión TCP. (socket)" );
+					"ERROR: No se pudo crear la conexión TCP. "
+					"(socket)" );
 			return -1;
 		}
 	
@@ -317,10 +320,10 @@ int Sockets_Crear_Socket_INET_UDP
  * @param newsockfd : Nuevo socket para enlazar el cliente
  * @param sockfd : Socket de recepción de clientes
  * @param cli_addr : Datos de la dirección del cliente
- * @param cli_addr : Datos de la dirección del cliente en estructura resumida
+ * @param cli_addr : Datos de la dirección del cliente en estructura
+ * resumida
  */
-int
-Sockets_Aceptar_un_cliente( newsockfd , sockfd , cli_addr , dir )
+int Sockets_Aceptar_un_cliente( newsockfd , sockfd , cli_addr , dir )
 int * newsockfd ;
 int sockfd ;
 struct sockaddr_in cli_addr ;
@@ -355,7 +358,8 @@ struct direccion * dir ;
  * @param tamanio : Tamaño del mensaje a recibir.
  * @return Mensaje recibido por UDP o 'NULL' en caso de error
  */
-void Sockets_Leer_mensaje_UDP( sockfd , buffer , tamanio , serv_addr , addr_size )
+void Sockets_Leer_mensaje_UDP
+( sockfd , buffer , tamanio , serv_addr , addr_size )
 int sockfd ;
 char buffer[];
 int tamanio ;
@@ -384,7 +388,8 @@ int addr_size ;
 /**
  * @param mensaje : Mensaje a enviar por UDP.
  */
-int Sockets_Enviar_mensaje_UDP( sockfd , serv_addr , addr_size , mensaje )
+int Sockets_Enviar_mensaje_UDP
+( sockfd , serv_addr , addr_size , mensaje )
 int sockfd ;
 struct sockaddr_in * serv_addr ;
 int addr_size ;
@@ -430,7 +435,8 @@ int Sockets_Leer_mensaje_TCP( int sockfd , char buffer[] , int tamanio )
 	
 	int error = read( sockfd , buffer , tamanio );
 		if ( error < 0 ) {
-			fprintf( stderr , "ERROR: No se pudo leer el mensaje. (TCP)" );
+			fprintf( stderr , "ERROR: No se pudo leer el mensaje. "
+							  "(TCP)" );
 			return 1;
 		}
 	
@@ -450,9 +456,11 @@ char * Sockets_Leer_mensaje_largo_TCP_FREE( int sockfd )
 	
 	int tam = 0;
 	sscanf( tamanio , "%i" , &tam );
-	char * mensaje_largo = malloc( tam );
+	char * mensaje_largo = (char *)Mem_assign( tam * sizeof(char) );
 	if( Sockets_Leer_mensaje_TCP( sockfd , mensaje_largo , tam ) )
 		return NULL;
+	
+	mensaje_largo[tam] = '\0';
 	
 	return mensaje_largo;
 	
@@ -471,7 +479,8 @@ int Sockets_Enviar_mensaje_TCP( int sockfdTCP , char * mensaje )
 	
 	int error = write( sockfdTCP , buffer , strlen(buffer) );
 		if ( error < 0 ) {
-			fprintf( stderr , "ERROR: No se pudo enviar el mensaje. (TCP)" );
+			fprintf( stderr , "ERROR: No se pudo enviar el mensaje. "
+							  "(TCP)" );
 			return -1;
 		}
 	
@@ -514,16 +523,13 @@ int Sockets_Enviar_mensaje_largo_TCP( int sockfdTCP , char * mensaje )
  * @return Si no puede leer el archivo retorna -1 (con error), de lo 
  * contrario 0 (sin error).
  */
-int Sockets_Enviar_archivo_por_UDP( sockfd , dest_addr , nombre_del_archivo , mostrar_porcentaje , mostrar_mensajes )
+int Sockets_Enviar_archivo_por_UDP
+( sockfd , dest_addr , nombre_del_archivo , mostrar_porcentaje )
 int sockfd ;
 struct sockaddr_in dest_addr ;
 char * nombre_del_archivo ;
 int mostrar_porcentaje ;
-_Bool mostrar_mensajes ;
 {
-	
-	if( mostrar_mensajes )
-		printf( "\n Se envía %s\n" , nombre_del_archivo );
 	
 	FILE * archivo = fopen( nombre_del_archivo , "rb" );
 		if ( archivo == NULL ) {
@@ -590,7 +596,7 @@ _Bool mostrar_mensajes ;
 								    addr_size ,
 								    mensaje );
 		///Confirmación:
-		Sockets_Leer_mensaje_UDP( sockfd , TAM , &dest_addr , addr_size );
+		Sockets_Leer_mensaje_UDP(sockfd , TAM , &dest_addr , addr_size);
 		///Imprime el porcentaje.
 		if(mostrar_porcentaje)
 			printf( " %s: 100 %%\n", nombre_del_archivo ) ;
@@ -612,11 +618,12 @@ _Bool mostrar_mensajes ;
  * 
  * @param nombre_del_archivo : Ruta para guardar los datos recibidos.
  * @param mostrar_porcentaje : Varaible de desición la cual al ser 
- * activada imprime el pocentaje de descarga transcurrido por cada parte.
+ * activada imprime el pocentaje de descarga transcurrido por cada parte
  * @return Si no puede guardar el archivo retorna 1 (con error), 
  * de lo contrario 0 (sin error).
  */
-int Sockets_Recibir_archivo_por_UDP( sockfdUDP , serv_addr , nombre_del_archivo , mostrar_porcentaje )
+int Sockets_Recibir_archivo_por_UDP
+( sockfdUDP , serv_addr , nombre_del_archivo , mostrar_porcentaje )
 int sockfdUDP ;
 struct sockaddr_in serv_addr ;
 char * nombre_del_archivo ;

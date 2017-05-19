@@ -1,7 +1,7 @@
 /**
- * @author Fernández Nicolás (niferz@hotmail.com)
+ * @author Fernández Nicolás (nicofernandez@alumnos.unc.edu.ar)
  * @date Abril, 2016
- * @version 1.0 beta
+ * @version 1.2017 beta
  *
  * @brief Cliente para la obtención de datos de telemetría de los
  * servidores AWS
@@ -45,10 +45,10 @@ int Establecer_conexion( );
 int Conectar_con_el_servidor( char * ip , int puerto );
 
 /**
- * @brief Llama a Sockets_Recibir_archivo_por_UDP para guardar localmente
- * una copia del archivo de telemetría en el servidor, el cual debe
- * ser informado previamente para iniciar el envío e ignora los ingresos
- * de nuevos comandos hasta finalizar
+ * @brief Llama a Sockets_Recibir_archivo_por_UDP para guardar
+ * localmente una copia del archivo de telemetría en el servidor, el
+ * cual debe ser informado previamente para iniciar el envío e ignora
+ * los ingresos de nuevos comandos hasta finalizar
  * 
  * @param sockfd : File descriptor asociado a la conexión
  * @param addrUDP : Contiene los datos de referencia de la dirección
@@ -82,7 +82,8 @@ int main( int argc , char **argv )
 	Sockets_Enviar_mensaje_TCP( sockfdTCP , mensaje_enviar );
 	
 	///Contrasenia:
-	Error_int( Sockets_Leer_mensaje_TCP( sockfdTCP , msj_in , TAM ) , SI );
+	Error_int( Sockets_Leer_mensaje_TCP( sockfdTCP , msj_in , TAM ) ,
+			   SI );
 	printf( "\n %s" , msj_in );
 	fgets( mensaje_enviar , TAM , stdin );
 		mensaje_enviar[ strlen( mensaje_enviar ) - 1 ] = '\0';
@@ -114,10 +115,10 @@ int main( int argc , char **argv )
 		char * orden = String_Cortar_hasta_FREE( &argumento , " " );
 		if ( !strcmp( orden , "descargar" ) )
 			Descargar( sockfdUDP , addrUDP , argumento );
-		free( orden );
+		Mem_desassign( (void **)&orden );
 		
 		///Respuesta al comando
-		free( msj_in_long );
+		Mem_desassign( (void **)&msj_in_long );
 		msj_in_long = Sockets_Leer_mensaje_largo_TCP_FREE( sockfdTCP );
 		Error_pnt( msj_in_long , SI );
 		printf( "\n %s" , msj_in_long );
@@ -225,10 +226,11 @@ int Establecer_conexion( )
 	
 }
 
-void Descargar( int sockfdUDP , struct sockaddr_in addrUDP , char * nombre )
+void Descargar
+( int sockfdUDP , struct sockaddr_in addrUDP , char * nombre )
 {
 	
-	char * ruta = malloc( strlen(nombre) + 12 );
+	char ruta[strlen(nombre) + 12 ];
 	ruta[0] = '.';
 	ruta[1] = '/';
 	ruta[2] = '\0';
@@ -241,7 +243,6 @@ void Descargar( int sockfdUDP , struct sockaddr_in addrUDP , char * nombre )
 												ruta ,
 												SI ) ,
 			   SI );
-	free( ruta );
 	__fpurge(stdin);
 	
 }

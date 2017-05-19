@@ -1,13 +1,13 @@
 /**
- * @author Fernández Nicolás (niferz@hotmail.com)
+ * @author Fernández Nicolás (nicofernandez@alumnos.unc.edu.ar)
  * @date Abril, 2016
- * @version 1.0 beta
+ * @version 1.2017 beta
  *
- * @brief Servidor AWS que provee los datos de telemetría correspondientes
- * (de la estación en la que se ejecuta) a los distintos clientes que
- * la soliciten
+ * @brief Servidor AWS que provee los datos de telemetría
+ * correspondientes (de la estación en la que se ejecuta) a los
+ * distintos clientes que la soliciten
  * 
- * \file Servidor.c
+ * @file Servidor.c
  */
 
 #include "../Recursos/File.h"
@@ -33,7 +33,8 @@ int Imprimir_conexiones_disponibles( int puerto );
  * @param servidor: file descriptor del socket que recibe conexiones TCP
  * @param conexion: file descriptor de la conexión con el cliente
  * @param conexion: file descriptor de la conexión UDP
- * @param addrUDP: para guardar los datos de dirección referidos al cliente
+ * @param addrUDP: para guardar los datos de dirección referidos al
+ * cliente
  * @return 1 si falló, de lo contrario 0
  */
 int Cliente( int , int * , int * , struct sockaddr_in * );
@@ -47,7 +48,8 @@ int Cliente( int , int * , int * , struct sockaddr_in * );
  *
  * @return respuesta al comando recibido para enviar al cliente
  */
-char * Comando_FREE( char comando[] , int sockfdUDP , struct sockaddr_in addrUDP );
+char * Comando_FREE
+( char comando[] , int sockfdUDP , struct sockaddr_in addrUDP );
 
 /**
  * @brief Carga los nombres de las comlumnas de la bd en un vector
@@ -62,45 +64,45 @@ char ** Cabecera_FREE( unsigned int * cantidad_de_columnas );
 
 int main( int argc , char **argv )
 {
-
+	
 	int servidor = 0;
 	int puerto = 6020;
-
+	
 	Error_int( Sockets_Crear_Socket_INET_TCP( &servidor , &puerto ) ,
 			   SI );
 	Error_int( Imprimir_conexiones_disponibles( puerto ) , NO );
-
+	
 	char mensaje_enviar[TAM];
 	memset( mensaje_enviar , '\0' , TAM );
-
+	
 	while ( 1 )
 	{
-
+		
 		int conexion, sockfdUDP;
 		struct sockaddr_in addrUDP;
-
-		while( Cliente( servidor , &conexion , &sockfdUDP , &addrUDP ) );
-
+		
+		while(Cliente( servidor , &conexion , &sockfdUDP , &addrUDP ));
+		
 		int contrasenia = 1;
 		Sockets_Enviar_mensaje_TCP( conexion , "Clave=" );
-
+		
 		char mensaje_leer[TAM];
 		do
 		{
-
+			
 			int error = Sockets_Leer_mensaje_TCP( conexion ,
 												  mensaje_leer ,
 												  TAM );
 			if( Error_int( error , NO ) )
 				break;
-
+			
 			if( contrasenia )
 			{
-
+				
 				contrasenia = 0;
 				if( strcmp( mensaje_leer , "root" ) == 0 )
 				{
-
+					
 					strcpy( mensaje_enviar ,
 						   "Clave verificada con exito\n\n"
 						   " · Comandos disponibles:\n\n"
@@ -121,69 +123,72 @@ int main( int argc , char **argv )
 						   "da estación (no_estacion: promedio.\n"
 						   "\t- desconectar: termina la sesión del usua"
 						   "rio.\1n" );
-
+					
 				}
 				else
 				{
-
+					
 					strcpy( mensaje_enviar , "Clave incorrecta" );
 					strcpy( mensaje_leer , "desconectar" );
-
+					
 				}
-
+			
 			}
 			else
 			{
-
+				
 				char * cmd_re;
-				cmd_re = Comando_FREE( mensaje_leer , sockfdUDP , addrUDP );
+				cmd_re = Comando_FREE( mensaje_leer ,
+									   sockfdUDP ,
+									   addrUDP );
 				strcpy( mensaje_enviar , cmd_re );
-
+				Mem_desassign( (void **)&cmd_re );
+				
 			}
-
+			
 			error = Sockets_Enviar_mensaje_largo_TCP( conexion ,
 													  mensaje_enviar );
 			if( Error_int( error , NO ) )
 				break;
-
+			
 		} while( strcmp( mensaje_leer , "desconectar" ) != 0 );
-
+		
 		shutdown( conexion , 2 );
-
+		
 	}
-
+	
 	close( servidor );
-
+	
 	return EXIT_SUCCESS;
-
+	
 }
 
 int Imprimir_conexiones_disponibles( int puerto )
 {
-
+	
 	struct ifaddrs * ifaddr , * ifa;
 	int s, n;
 	char host[NI_MAXHOST];
-
+	
 	if( getifaddrs( &ifaddr ) == -1 )
 	{
-
+		
 		fprintf( stderr ,
 				"ERROR: No se encuentran dispositivos de red \
 				(getifaddrs)" );
 		return -1;
-
+		
 	}
-
-	for( ifa = ifaddr , n = 0 ; ifa != NULL ; ifa = ifa->ifa_next , n++ )
+	
+	for(ifa = ifaddr , n = 0 ; ifa != NULL ; ifa = ifa->ifa_next , n++)
 	{
-
+		
 		if( ifa->ifa_addr == NULL )
 			continue;
-
+		
 		if( ifa->ifa_addr->sa_family != AF_INET )
 			continue;
-
+		
 		s = getnameinfo( ifa->ifa_addr ,
 						 sizeof(struct sockaddr_in) ,
 						 host ,
@@ -198,15 +203,15 @@ int Imprimir_conexiones_disponibles( int puerto )
 						 gai_strerror(s) );
 				return -1;
 			}
-
+		
 		printf("\n %-8s\t%s:%d", ifa->ifa_name , host , puerto);
-
+		
 	}
-
+	
 	freeifaddrs(ifaddr);
-
+	
 	return 0;
-
+	
 }
 
 int Cliente( servidor , conexion , sockfdUDP , addrUDP )
@@ -215,7 +220,7 @@ int * conexion ;
 int * sockfdUDP ;
 struct sockaddr_in * addrUDP ;
 {
-
+	
 	///Acepto un cliente:
 	struct direccion dir;
 	struct sockaddr_in cli_addr;
@@ -227,10 +232,10 @@ struct sockaddr_in * addrUDP ;
 											  &dir ) ,
 				   NO ) )
 	{
-
+		
 		close( *conexion );
 		return 1;
-
+		
 	}
 	printf( "\n Conectado a: %s:%d " , dir.ip , dir.puerto );
 	struct direccion mi_dir;
@@ -238,35 +243,36 @@ struct sockaddr_in * addrUDP ;
 	printf( "\n Desde: %s:%d " , mi_dir.ip , mi_dir.puerto );
 	///Recibo el puerto del socket UDP:
 	char msj_leer[TAM];
-	Error_int( Sockets_Leer_mensaje_TCP( *conexion , msj_leer , TAM ) , SI );
+	Error_int( Sockets_Leer_mensaje_TCP( *conexion , msj_leer , TAM ) ,
+			   SI );
 	char puerto_UDP_str[ strlen(msj_leer) ];
 	strcpy( puerto_UDP_str , msj_leer );
 	int puerto_UDP = atoi	( puerto_UDP_str );
 	///Conecto por UDP:
-	struct hostent * servidorUDP = Sockets_Verificar_host_IPv4( dir.ip );
+	struct hostent * servidorUDP = Sockets_Verificar_host_IPv4(dir.ip);
 	if( Error_pnt( servidorUDP , NO ) )
 	{
-
+		
 		close( *conexion );
 		return 1;
-
+		
 	}
 	*sockfdUDP = Sockets_Crear_Y_Conectar_Socket_INET_UDP( servidorUDP ,
 														   addrUDP ,
 														   puerto_UDP );
 	if( Error_int( *sockfdUDP , NO ) )
 	{
-
+		
 		close( *conexion );
 		return 1;
-
+		
 	}
 	Sockets_Direccion_del_sockaddr_in( *addrUDP , &dir );
 	printf( "\n UDP: %s:%d " , dir.ip , dir.puerto );
 	fflush( stdout );
-
+	
 	return 0;
-
+	
 }
 
 unsigned int Cantidad_de_simbolos( char * cadena )
@@ -341,22 +347,22 @@ char ** Cabecera_FREE( unsigned int * cantidad_de_columnas )
 		}
 	
 	///Asigno memoria al vector de cadenas
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
+	File_move_to_next_ocurrence_char( bd , 13 , 1 );
+	File_move_to_next_ocurrence_char( bd , 13 , 1 );
 	char * linea3 = File_read_until_next_ocurrence_char_FREE( bd , 13 );
 	char * linea3_mem = linea3;
 	linea3 = Corregir_simbolos_FREE( linea3 );
-	free( linea3_mem );
+	Mem_desassign( (void **)&linea3_mem );
 	linea3_mem = linea3;
 	*cantidad_de_columnas = String_Cantidad_de_columnas( linea3 , "," );
 	char ** cabecera;
-	cabecera = (char **)malloc( *cantidad_de_columnas * sizeof(char *) );
+	cabecera = (char **)malloc(*cantidad_de_columnas * sizeof(char *));
 	
 	unsigned int pos_cab;
 	for( pos_cab = 0 ; pos_cab < *cantidad_de_columnas ; pos_cab++ )
 		cabecera[pos_cab] = String_Cortar_hasta_FREE( &linea3 , "," );
 	
-	free( linea3_mem );
+	Mem_desassign( (void **)&linea3_mem );
 	fclose( bd );
 	
 	return cabecera;
@@ -374,11 +380,9 @@ unsigned int Cantidad_de_estaciones()
 	unsigned int cantidad = 0;
 	
 	///Cargo la linea 4 (primera con datos)
-	///@todo reemplazar por mover en vez de leer para mejor
-	///manejo de memoria
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
 	char * linea;
 	char * linea_cortada;
 	linea = File_read_until_next_ocurrence_char_FREE( bd , 13 );
@@ -399,14 +403,14 @@ unsigned int Cantidad_de_estaciones()
 			strcpy( ultimo_nro_estacion , nro_estacion );
 			
 		}
-		free( nro_estacion );
-		nro_estacion = NULL;
-		free( linea );
+		Mem_desassign( (void **)&nro_estacion );
+		Mem_desassign( (void **)&linea );
 		linea = File_read_until_next_ocurrence_char_FREE( bd , 13 );
 		linea_cortada = linea;
 		
 	}
-	free( linea );
+	
+	Mem_desassign( (void **)&linea );
 	
 	fclose( bd );
 	
@@ -420,18 +424,16 @@ char ** Estaciones_FREE( unsigned int * cant_estaciones )
 	*cant_estaciones = Cantidad_de_estaciones();
 	
 	FILE * bd = fopen( "datos_meteorologicos.CSV" , "r" );
-		if( bd == NULL ){
+		if( bd == NULL )
 			return NULL;
-		}
 	
 	char ** estaciones;
 	estaciones = (char **)malloc( *cant_estaciones * sizeof(char *) );
 	
 	///Cargo la linea 4 (primera con datos)
-	///@todo cambiar por mover para mejor manejo de memoria
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
 	char * linea;
 	char * linea_cortada;
 	linea = File_read_until_next_ocurrence_char_FREE( bd , 13 );
@@ -451,27 +453,30 @@ char ** Estaciones_FREE( unsigned int * cant_estaciones )
 			
 			strcpy( ultimo_nro_estacion , nro_estacion );
 			///Cargo numero, nombre y cantidad separado por '|'
-			char * nombre = String_Cortar_hasta_FREE( &linea_cortada , "," );
-			///@todo cambiar por mover para mejor manejo de memoria
-			free( String_Cortar_hasta_FREE( &linea_cortada , "," ) );
-			free( String_Cortar_hasta_FREE( &linea_cortada , "," ) );
+			char * nombre = String_Cortar_hasta_FREE( &linea_cortada ,
+													  "," );
+			String_Mover_hasta( &linea_cortada , "," , /*add =*/ 1 );
+			String_Mover_hasta( &linea_cortada , "," , /*add =*/ 1 );
 			int campos = 0;
 			char * campo;
 			while( linea_cortada != NULL )
 			{
 				
-				campo = String_Cortar_hasta_FREE( &linea_cortada , "," );
+				campo = String_Cortar_hasta_FREE(&linea_cortada , ",");
 				if( strcmp( campo , "--" ) != 0 )
 					campos++;
-				free( campo );
+				Mem_desassign( (void **)&campo );
 				
 			}
-			free( linea );
-			char * estacion;
-			estacion = malloc( strlen(nro_estacion) + strlen(nombre) + 5 );
-			sprintf( estacion , "%s|%s|%i" , nro_estacion , nombre , campos );
-			free( nro_estacion );
-			free( nombre );
+			Mem_desassign( (void **)&linea );
+			char estacion[strlen(nro_estacion) + strlen(nombre) + 5];
+			sprintf( estacion ,
+					"%s|%s|%i" ,
+					 nro_estacion ,
+					 nombre ,
+					 campos );
+			Mem_desassign( (void **)&nro_estacion );
+			Mem_desassign( (void **)&nombre );
 			estaciones[pos] = estacion;
 			
 			pos++;
@@ -482,6 +487,8 @@ char ** Estaciones_FREE( unsigned int * cant_estaciones )
 		linea_cortada = linea;
 		
 	}
+	
+	Mem_desassign( (void **)&linea );
 	
 	fclose( bd );
 	
@@ -496,23 +503,13 @@ char * Listar_FREE( )
 	char ** cabecera;
 	cabecera = Cabecera_FREE( &cant_columnas );
 		if( cabecera == NULL )
-		{
-			char * bd_lose = "Base de datos perdida.";
-			char * retorno = malloc( strlen( bd_lose ) );
-			strcpy( retorno , bd_lose );
-			return retorno;
-		}
+			return String_Crear( "Base de datos perdida." );
 	
 	unsigned int cant_estaciones = 0;
 	char ** estaciones;
 	estaciones = Estaciones_FREE( &cant_estaciones );
-		if( cabecera == NULL )
-		{
-			char * bd_lose = "Base de datos perdida.";
-			char * retorno = malloc( strlen( bd_lose ) );
-			strcpy( retorno , bd_lose );
-			return retorno;
-		}
+		if( estaciones == NULL )
+			return String_Crear( "Base de datos perdida." );
 	
 	///Asigno memoria a la lista
 	unsigned int estacion;
@@ -521,9 +518,8 @@ char * Listar_FREE( )
 	{
 		
 		char * puntero = estaciones[estacion];
-		///@todo corregir (memoria):
-		free( String_Cortar_hasta_FREE( &puntero , "|" ) );
-		free( String_Cortar_hasta_FREE( &puntero , "|" ) );
+		String_Mover_hasta( &puntero , "|" , /*add =*/ 1 );
+		String_Mover_hasta( &puntero , "|" , /*add =*/ 1 );
 		int campos;
 		sscanf( puntero , "%i" , &campos );
 		tam_lista += 2 + campos;
@@ -546,13 +542,13 @@ char * Listar_FREE( )
 		pos_lista++;
 		int campos;
 		sscanf( puntero , "%i" , &campos );
-		free( puntero_mem );
+		Mem_desassign( (void **)&puntero_mem );
 		unsigned int nro_campo;
 		for( nro_campo = 0 ; nro_campo < campos ; nro_campo++ )
 		{
 			
 			unsigned int tam = strlen( cabecera[nro_campo + 4] ) + 2;
-			lista[pos_lista] = malloc( tam );
+			lista[pos_lista] = Mem_assign( tam );
 			lista[pos_lista][0] = '\t';
 			lista[pos_lista][1] = '\0';
 			strcat( lista[pos_lista] , cabecera[nro_campo + 4] );
@@ -563,6 +559,7 @@ char * Listar_FREE( )
 		
 	}
 	
+	///@todo text struct !!!
 	unsigned int cab_pos;
 	for( cab_pos = 0 ; cab_pos < cant_columnas ; cab_pos++ )
 		free( cabecera[cab_pos] );
@@ -576,7 +573,8 @@ char * Listar_FREE( )
 		tam_retorno += strlen( lista[pos_lista] );
 		
 	}
-	char * retorno = malloc( tam_retorno );
+	///@todo puedo cambiar por retornar un text struct !!!
+	char * retorno = Mem_assign( tam_retorno );
 	retorno[0] = '\0';
 	
 	///Cargo el retorno
@@ -584,20 +582,22 @@ char * Listar_FREE( )
 	{
 		
 		strcat( retorno , lista[pos_lista] );
+		///@todo text struct !!!
 		free( lista[pos_lista] );
 		
 	}
 	
+	///@todo text struct !!!
 	free( lista );
-
+	
 	retorno[tam_retorno] = '\0';
-
+	
 	return retorno;
 	
 }
 
-char * 
-Descargar( char * nro_estacion , int sockfdUDP , struct sockaddr_in addrUDP )
+char * Descargar
+( char * nro_estacion , int sockfdUDP , struct sockaddr_in addrUDP )
 {
 	
 	FILE * archivo = fopen( nro_estacion , "w" );
@@ -616,24 +616,25 @@ Descargar( char * nro_estacion , int sockfdUDP , struct sockaddr_in addrUDP )
 	///Cargo el archivo
 	char * linea = File_read_until_next_ocurrence_char_FREE( bd , 13 );
 	fprintf( archivo , "%s\n" , linea );
-	free( linea );
+	Mem_desassign( (void **)&linea );
 	linea = File_read_until_next_ocurrence_char_FREE( bd , 13 );
 	fprintf( archivo , "%s\n" , linea );
-	free( linea );
+	Mem_desassign( (void **)&linea );
 	linea = File_read_until_next_ocurrence_char_FREE( bd , 13 );
 	fprintf( archivo , "%s\n" , linea );
-	free( linea );
+	Mem_desassign( (void **)&linea );
 	int tam_bd = File_size( bd );
 	while( ftell( bd ) != tam_bd )
 	{
 		
 		linea = File_read_until_next_ocurrence_char_FREE( bd , 13 );
 		char * linea_sin_cortar = linea;
-		char * nro_estacion_linea = String_Cortar_hasta_FREE( &linea , "," );
+		char * nro_estacion_linea = String_Cortar_hasta_FREE( &linea ,
+															  "," );
 		if( strcmp( nro_estacion , nro_estacion_linea ) == 0 )
 			fprintf( archivo , "%s\n" , linea_sin_cortar );
-		free( linea_sin_cortar );
-		free( nro_estacion_linea );
+		Mem_desassign( (void **)&linea_sin_cortar );
+		Mem_desassign( (void **)&nro_estacion_linea );
 		
 	}
 	
@@ -641,7 +642,6 @@ Descargar( char * nro_estacion , int sockfdUDP , struct sockaddr_in addrUDP )
 	if( Error_int( Sockets_Enviar_archivo_por_UDP( sockfdUDP ,
 												   addrUDP ,
 												   nro_estacion ,
-												   SI ,
 												   SI ) ,
 				   NO ) )
 		return "No existen datos de la estación solicitada";
@@ -655,10 +655,11 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 	
 	FILE * bd = fopen( "datos_meteorologicos.CSV" , "r" );
 		if( bd == NULL )
-			return "Base de datos perdida";
+			return String_Crear( "Base de datos perdida" );
 	
 	char ** retorno = (char **)malloc( 31 * sizeof(char *) );
 	char cabecera[] = "\tDia\tAcumulado[mm]";
+	///@todo posible problema al desalojar la memoria !!!
 	retorno[0] = cabecera;
 	unsigned int retorno_dia = 1;
 	unsigned int tam_retorno_cadena = 0;
@@ -666,9 +667,9 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 	
 	///Recorro t'odo el archivo de datos (a partir de la 4ta fila)
 	///@todo manejo de memoria:
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
-	free( File_read_until_next_ocurrence_char_FREE( bd , 13 ) );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
+	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
 	char ultimo_dia[3];
 	memset( ultimo_dia , '\0' , 3 );
 	float precipitacion_acum = 0;
@@ -677,25 +678,28 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 	{
 		
 		///Trabajo solo con las lineas de nro_estacion
-		char * linea = File_read_until_next_ocurrence_char_FREE( bd , 13 );
+		char * linea = File_read_until_next_ocurrence_char_FREE( bd ,
+																 13 );
 		char * linea_mem = linea;
-		char * nro_estacion_linea = String_Cortar_hasta_FREE( &linea , "," );
+		char * nro_estacion_linea = String_Cortar_hasta_FREE( &linea ,
+															  "," );
 		if( strcmp( nro_estacion , nro_estacion_linea ) == 0 )
 		{
 			///@todo memoria
-			free( String_Cortar_hasta_FREE( &linea , "," ) );
-			free( String_Cortar_hasta_FREE( &linea , "," ) );
+			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
+			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
 			char * fecha = String_Cortar_hasta_FREE( &linea , "," );
 			char * fecha_mem = fecha;
 			char * dia = String_Cortar_hasta_FREE( &fecha , "/" );
-			free( fecha_mem );
-			free( String_Cortar_hasta_FREE( &linea , "," ) );
-			free( String_Cortar_hasta_FREE( &linea , "," ) );
-			free( String_Cortar_hasta_FREE( &linea , "," ) );
-			char * precipitacion_str = String_Cortar_hasta_FREE( &linea , "," );
+			Mem_desassign( (void **)&fecha_mem );
+			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
+			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
+			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
+			char * precipitacion_str = String_Cortar_hasta_FREE(&linea ,
+																"," );
 			float precipitacion = 0;
 			sscanf( precipitacion_str , "%f" , &precipitacion );
-			free( precipitacion_str );
+			Mem_desassign( (void **)&precipitacion_str );
 			if( strcmp( ultimo_dia , "\0" ) == 0 )
 				strcpy( ultimo_dia , dia );
 			if( strcmp( dia , ultimo_dia ) == 0 )
@@ -708,15 +712,15 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 											precipitacion_acum );
 				precipitacion_acum = precipitacion;
 				char * retorno_fila;
-				retorno_fila = malloc( strlen( prec_acum_str )
-										+ strlen( dia )
-										+ 2 );
+				retorno_fila = Mem_assign( strlen( prec_acum_str )
+											+ strlen( dia )
+											+ 2 );
 				retorno_fila[0] = '\0';
 				strcat( retorno_fila , "\t" );
 				strcat( retorno_fila , ultimo_dia );
 				strcat( retorno_fila , "\t" );
 				strcat( retorno_fila , prec_acum_str );
-				free( prec_acum_str );
+				Mem_desassign( (void **)&prec_acum_str );
 				retorno[retorno_dia++] = retorno_fila;
 				tam_retorno_cadena += strlen( retorno_fila ) + 1;
 				
@@ -724,17 +728,17 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 				
 			}
 			
-			free( dia );
-
+			Mem_desassign( (void **)&dia );
+			
 		}//if
-
-		free( linea_mem );
-		free( nro_estacion_linea );
+		
+		Mem_desassign( (void **)&linea_mem );
+		Mem_desassign( (void **)&nro_estacion_linea );
 		
 	}
 	
 	///Paso el retorno a una sola cadena
-	char * retorno_cadena = malloc( tam_retorno_cadena );
+	char * retorno_cadena = Mem_assign( tam_retorno_cadena );
 	retorno_cadena[0] = '\0';
 	unsigned int pos;
 	for( pos = 0 ; pos < retorno_dia ; pos++ )
@@ -742,18 +746,19 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 		
 		strcat( retorno_cadena , retorno[pos] );
 		strcat( retorno_cadena , "\n" );
-		///@todo recuperar la funcion, falla sin sentido
-		//free( retorno[pos] ); !!! ???
+		///@todo text struct
+		Mem_desassign( (void **)&(retorno[pos]) );
 		
 	}
-	free( retorno );
+	///@todo text struct
+	Mem_desassign( (void **)&retorno );
 	
 	return retorno_cadena;
 	
 }
 
-char *
-Comando_FREE( char comando[] , int sockfdUDP , struct sockaddr_in addrUDP )
+char * Comando_FREE
+( char comando[] , int sockfdUDP , struct sockaddr_in addrUDP )
 {
 	
 	char * cmd_cut = comando;
@@ -763,29 +768,28 @@ Comando_FREE( char comando[] , int sockfdUDP , struct sockaddr_in addrUDP )
 		case 'd':
 			
 			if( strcmp( cmd_cut , "desconectar" ) == 0 )
-			{
-				char * desc_rec = "Desconexión recibida.";
-				char * retorno = malloc( strlen( desc_rec ) );
-				strcpy( retorno , desc_rec );
-				retorno[strlen(desc_rec)] = '\0';
-				return retorno;
-			}
+				return String_Crear( "Desconexión recibida." );
+			
 			///Comprobar 'descargar' o 'diario_precipitacion'
 			char * orden = String_Cortar_hasta_FREE( &cmd_cut , " " );
+				if( orden == NULL )
+					break;
 			if( strcmp( orden , "descargar" ) == 0 )
 			{
-				free( orden );
-				char * rtrn = Descargar( cmd_cut , sockfdUDP , addrUDP );
-				char * retorno = malloc( strlen(rtrn) );
-				strcpy( retorno , rtrn );
-				retorno[strlen(rtrn)] = '\0';
-				return retorno;
+				
+				Mem_desassign( (void **)&orden );
+				return String_Crear( Descargar( cmd_cut ,
+												sockfdUDP ,
+												addrUDP )
+									);
 			}
 			if( strcmp( orden , "diario_precipitacion" ) == 0
 				|| strcmp( orden , "diario_precipitación" ) == 0 )
 			{
-				free( orden );
+				
+				Mem_desassign( (void **)&orden );
 				return Diario_precipitacion_FREE( cmd_cut );
+				
 			}
 			break;
 			
@@ -797,6 +801,6 @@ Comando_FREE( char comando[] , int sockfdUDP , struct sockaddr_in addrUDP )
 		
 	}
 	
-	return "Comando no reconocido";
+	return String_Crear( "Comando no reconocido" );
 	
 }

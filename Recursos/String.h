@@ -1,6 +1,7 @@
 /**
- * @author Fernández Nicolás (niferz@hotmail.com)
+ * @author Fernández Nicolás (nicofernandez@alumnos.unc.edu.ar)
  * @date Abril, 2016
+ * @version 0.5.2017 beta
  *
  * @brief Manejo de cadenas: Lectura, búsqueda de caracteres, etc
  * 
@@ -14,6 +15,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "Mem.h"
+
+char * String_Crear( char * cadena )
+{
+	
+	char * retorno = (char *)Mem_assign( strlen( cadena ) );
+	strcpy( retorno , cadena );
+	retorno[strlen( retorno )] = '\0';
+	return retorno;
+	
+}
+
 char * String_Flotante_a_cadena_FREE( float numero )
 {
 	
@@ -21,7 +34,7 @@ char * String_Flotante_a_cadena_FREE( float numero )
 	memset( numero_str , '\0' , 50 );
 	sprintf( numero_str , "%f" , numero );
 	
-	char * retorno = malloc( strlen( numero_str ) );
+	char * retorno = (char *)Mem_assign( strlen( numero_str ) );
 	strcpy( retorno , numero_str );
 	
 	return retorno;
@@ -43,7 +56,7 @@ char * String_Entero_a_cadena_FREE( int numero )
 		
 	}
 	
-	char * cadena = malloc( digitos );
+	char * cadena = (char *)Mem_assign( digitos );
 	
 	sprintf( cadena , "%i" , numero );
 	
@@ -77,7 +90,9 @@ String_Cantidad_de_columnas( char * cadena , char * separadores )
 	for( puntero = &cadena[0] ; puntero[0] != '\0' ; puntero++ )
 	{
 		
-		for( separador_nro = 0 ; separador_nro < nro_sep ; separador_nro++ )
+		for( separador_nro = 0 ; \
+			 separador_nro < nro_sep ; \
+			 separador_nro++ )
 		{
 			
 			if( puntero[0] == separadores[separador_nro] )
@@ -121,7 +136,9 @@ int String_Posicion_siguiente_char( char * cadena , char * caracteres )
 	int pos_cadena;
 	int caractere_nro;
 	for( pos_cadena = 0 ; pos_cadena < tam_cadena ; pos_cadena++ )
-		for( caractere_nro = 0 ; caractere_nro < cant_car ; caractere_nro++ )
+		for( caractere_nro = 0 ; \
+			 caractere_nro < cant_car ; \
+			 caractere_nro++ )
 			if( cadena[pos_cadena] == caracteres[caractere_nro] )
 				return pos_cadena;
 	
@@ -135,17 +152,17 @@ char * String_copiar_n_FREE( char * cadena ,  int n )
 	if( n <= 0 )
 		return "";
 	
-	int tam_cadena = strlen(cadena);
-	if( n >= tam_cadena )
-	{
-		
-		char * copia = malloc( tam_cadena );
-		strcpy( copia , cadena );
-		return copia;
-		
-	}
+		int tam_cadena = strlen(cadena);
+		if( n >= tam_cadena )
+		{
+			
+			char * copia = (char *)Mem_assign( tam_cadena );
+			strcpy( copia , cadena );
+			return copia;
+			
+		}
 	
-	char * copia = malloc( n + 1 );
+	char * copia = (char *)Mem_assign( n + 1 );
 	copia[n] = '\0';
 	int pos;
 	for( pos = 0 ; pos < n ; pos++)
@@ -173,19 +190,44 @@ char * String_Cortar_hasta_FREE( char ** cadena , char * caracteres )
 	int pos;
 	pos = String_Posicion_siguiente_char( *cadena , caracteres );
 	
-	if( pos == -1 )
-	{
-		
-		char * copia = malloc( strlen( *cadena ) );
-		strcpy( copia , *cadena );
-		*cadena = NULL;
-		return copia;
-		
-	}
+		if( pos == -1 )
+		{
+			
+			char * copia = (char *)Mem_assign( strlen( *cadena ) );
+			strcpy( copia , *cadena );
+			*cadena = NULL;
+			return copia;
+			
+		}
 	
 	char * copia = String_copiar_n_FREE( *cadena , pos );
 	*cadena = *cadena + pos + 1;
 	return copia;
+	
+}
+
+/**
+ * @brief Cambia el puntero de la cadena a la posicion del siguiente 
+ * caracter dentro de un conjunto dado, mas un valor 'add'; o null si
+ * no contiene caracter alguno, igual al del conjunto
+ * 
+ * @param cadena puntero a mover
+ * @param caracteres conjunto de caracteres que limitan la operacion
+ */
+void String_Mover_hasta
+( char ** cadena , char * caracteres , unsigned int add )
+{
+	
+	if( cadena == NULL )
+		return;
+	
+	int pos;
+	pos = String_Posicion_siguiente_char( *cadena , caracteres );
+	
+		if( pos == -1 )
+			return;
+	
+	*cadena = *cadena + pos + add;
 	
 }
 
