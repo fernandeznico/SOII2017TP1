@@ -55,12 +55,16 @@ char * Comando_FREE
  * @brief Carga los nombres de las comlumnas de la bd en un vector
  * de cadenas
  *
- * @param cantidad_de_columnas : tamanio referencia para la matriz
- * creada
- *
- * @return Nombres de columnas separados en un vector de cadenas
+ * @return Nombres y cantidad de columnas en un struct text
  */
-char ** Cabecera_FREE( unsigned int * cantidad_de_columnas );
+text * Cabecera_FREE( );
+
+/**
+ * @brief Carga los nombres de las estaciones en un struct text
+ *
+ * @return Nombres y cantidad de estaciones en un struct text
+ */
+text * Estaciones_FREE( );
 
 int main( int argc , char **argv )
 {
@@ -338,7 +342,7 @@ char * Corregir_simbolos_FREE( char * cadena )
 	
 }
 
-char ** Cabecera_FREE( unsigned int * cantidad_de_columnas )
+text * Cabecera_FREE( )
 {
 	
 	FILE * bd = fopen( "datos_meteorologicos.CSV" , "r" );
@@ -354,13 +358,21 @@ char ** Cabecera_FREE( unsigned int * cantidad_de_columnas )
 	linea3 = Corregir_simbolos_FREE( linea3 );
 	Mem_desassign( (void **)&linea3_mem );
 	linea3_mem = linea3;
-	*cantidad_de_columnas = String_Cantidad_de_columnas( linea3 , "," );
-	char ** cabecera;
-	cabecera = (char **)malloc(*cantidad_de_columnas * sizeof(char *));
+	unsigned int cantidad_de_columnas;
+	cantidad_de_columnas = String_Cantidad_de_columnas( linea3 , "," );
+	text * cabecera;
+	cabecera = Mem_Create_text_null( cantidad_de_columnas );
 	
 	unsigned int pos_cab;
-	for( pos_cab = 0 ; pos_cab < *cantidad_de_columnas ; pos_cab++ )
-		cabecera[pos_cab] = String_Cortar_hasta_FREE( &linea3 , "," );
+	for( pos_cab = 0 ; pos_cab < cabecera->parts ; pos_cab++ )
+	{
+		
+		char * str = String_Cortar_hasta_FREE( &linea3 , "," );
+		printf( "\n CABECERA: pos_cab = %u | str = %s" , pos_cab , str );
+		cabecera->t[pos_cab] = Mem_Create_string( strlen( str ) );
+		strcpy( cabecera->t[pos_cab] , str );
+		
+	}
 	
 	Mem_desassign( (void **)&linea3_mem );
 	fclose( bd );
@@ -418,17 +430,17 @@ unsigned int Cantidad_de_estaciones()
 	
 }
 
-char ** Estaciones_FREE( unsigned int * cant_estaciones )
+text * Estaciones_FREE( )
 {
 	
-	*cant_estaciones = Cantidad_de_estaciones();
+	unsigned int cant_estaciones = Cantidad_de_estaciones();
 	
 	FILE * bd = fopen( "datos_meteorologicos.CSV" , "r" );
 		if( bd == NULL )
 			return NULL;
 	
-	char ** estaciones;
-	estaciones = (char **)malloc( *cant_estaciones * sizeof(char *) );
+	text * estaciones;
+	estaciones = Mem_Create_text_null( cant_estaciones );
 	
 	///Cargo la linea 4 (primera con datos)
 	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
@@ -469,7 +481,9 @@ char ** Estaciones_FREE( unsigned int * cant_estaciones )
 				
 			}
 			Mem_desassign( (void **)&linea );
-			char estacion[strlen(nro_estacion) + strlen(nombre) + 5];
+			char * estacion = (char *)Mem_assign( strlen(nro_estacion)
+												  + strlen(nombre)
+												  + 5 );
 			sprintf( estacion ,
 					"%s|%s|%i" ,
 					 nro_estacion ,
@@ -477,7 +491,7 @@ char ** Estaciones_FREE( unsigned int * cant_estaciones )
 					 campos );
 			Mem_desassign( (void **)&nro_estacion );
 			Mem_desassign( (void **)&nombre );
-			estaciones[pos] = estacion;
+			estaciones->t[pos] = estacion;
 			
 			pos++;
 			
@@ -499,25 +513,27 @@ char ** Estaciones_FREE( unsigned int * cant_estaciones )
 char * Listar_FREE( )
 {
 	
-	unsigned int cant_columnas = 0;
-	char ** cabecera;
-	cabecera = Cabecera_FREE( &cant_columnas );
+	text * cabecera;
+	cabecera = Cabecera_FREE( );
 		if( cabecera == NULL )
 			return String_Crear( "Base de datos perdida." );
 	
-	unsigned int cant_estaciones = 0;
-	char ** estaciones;
-	estaciones = Estaciones_FREE( &cant_estaciones );
+	Print_text_all_parts( cabecera );
+	
+	text * estaciones;
+	estaciones = Estaciones_FREE( );
 		if( estaciones == NULL )
 			return String_Crear( "Base de datos perdida." );
+	
+	Print_text_all_parts( estaciones );
 	
 	///Asigno memoria a la lista
 	unsigned int estacion;
 	unsigned int tam_lista = 0;
-	for( estacion = 0 ; estacion < cant_estaciones ; estacion++ )
+	for( estacion = 0 ; estacion < estaciones->parts ; estacion++ )
 	{
 		
-		char * puntero = estaciones[estacion];
+		char * puntero = estaciones->t[estacion];
 		String_Mover_hasta( &puntero , "|" , /*add =*/ 1 );
 		String_Mover_hasta( &puntero , "|" , /*add =*/ 1 );
 		int campos;
@@ -525,72 +541,60 @@ char * Listar_FREE( )
 		tam_lista += 2 + campos;
 		
 	}
-	char ** lista = (char **)malloc( tam_lista * sizeof(char *) );
+	text * lista = Mem_Create_text_null( tam_lista );
 	
 	///Cargo la lista
 	unsigned int pos_lista = 0;
-	for( estacion = 0 ; estacion < cant_estaciones ; estacion++ )
+	for( estacion = 0 ; estacion < estaciones->parts ; estacion++ )
 	{
 		
-		char * puntero = estaciones[estacion];
-		char * puntero_mem = puntero;
-		lista[pos_lista] = String_Cortar_hasta_FREE( &puntero , "|" );
-		strcat( lista[pos_lista] , " " );
+		char * puntero = estaciones->t[estacion];
+		char * str = String_Cortar_hasta_FREE(&puntero , "|");
+		lista->t[pos_lista] = Mem_Create_string( strlen( str ) + 1 );
+		strcpy( lista->t[pos_lista] , str );
+		strcat( lista->t[pos_lista] , " " );
+		Mem_desassign( (void *)&str );
+		
 		pos_lista++;
-		lista[pos_lista] = String_Cortar_hasta_FREE( &puntero , "|" );
-		strcat( lista[pos_lista] , "\n" );
+		str = String_Cortar_hasta_FREE(&puntero , "|");
+		lista->t[pos_lista] = Mem_Create_string( strlen( str ) + 1 );
+		strcpy( lista->t[pos_lista] , str );
+		strcat( lista->t[pos_lista] , "\n" );
+		Mem_desassign( (void *)&str );
+		
 		pos_lista++;
 		int campos;
 		sscanf( puntero , "%i" , &campos );
-		Mem_desassign( (void **)&puntero_mem );
 		unsigned int nro_campo;
 		for( nro_campo = 0 ; nro_campo < campos ; nro_campo++ )
 		{
 			
-			unsigned int tam = strlen( cabecera[nro_campo + 4] ) + 2;
-			lista[pos_lista] = Mem_assign( tam );
-			lista[pos_lista][0] = '\t';
-			lista[pos_lista][1] = '\0';
-			strcat( lista[pos_lista] , cabecera[nro_campo + 4] );
-			strcat( lista[pos_lista] , "\n" );
+			unsigned int tam = strlen( cabecera->t[nro_campo + 4] ) + 2;
+			lista->t[pos_lista] = Mem_Create_string( tam );
+			lista->t[pos_lista][0] = '\t';
+			lista->t[pos_lista][1] = '\0';
+			strcat( lista->t[pos_lista] , cabecera->t[nro_campo + 4] );
+			strcat( lista->t[pos_lista] , "\n" );
 			pos_lista++;
 			
 		}
 		
 	}
 	
-	///@todo text struct !!!
-	unsigned int cab_pos;
-	for( cab_pos = 0 ; cab_pos < cant_columnas ; cab_pos++ )
-		free( cabecera[cab_pos] );
-	free( cabecera );
+	Mem_Delete_text( &cabecera );
+	Mem_Delete_text( &estaciones );
 	
 	///Asigno memoria al retorno
 	unsigned int tam_retorno = 0;
 	for( pos_lista = 0 ; pos_lista < tam_lista ; pos_lista++ )
-	{
-		
-		tam_retorno += strlen( lista[pos_lista] );
-		
-	}
-	///@todo puedo cambiar por retornar un text struct !!!
-	char * retorno = Mem_assign( tam_retorno );
-	retorno[0] = '\0';
+		tam_retorno += strlen( lista->t[pos_lista] );
+	char * retorno = Mem_Create_string( tam_retorno );
 	
 	///Cargo el retorno
 	for( pos_lista = 0 ; pos_lista < tam_lista ; pos_lista++ )
-	{
-		
-		strcat( retorno , lista[pos_lista] );
-		///@todo text struct !!!
-		free( lista[pos_lista] );
-		
-	}
+		strcat( retorno , lista->t[pos_lista] );
 	
-	///@todo text struct !!!
-	free( lista );
-	
-	retorno[tam_retorno] = '\0';
+	Mem_Delete_text( &lista );
 	
 	return retorno;
 	
@@ -666,7 +670,6 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 	tam_retorno_cadena += strlen( cabecera ) + 1;
 	
 	///Recorro t'odo el archivo de datos (a partir de la 4ta fila)
-	///@todo manejo de memoria:
 	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
 	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
 	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );

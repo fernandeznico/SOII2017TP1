@@ -85,11 +85,16 @@ int main( int argc , char **argv )
 	Error_int( Sockets_Leer_mensaje_TCP( sockfdTCP , msj_in , TAM ) ,
 			   SI );
 	printf( "\n %s" , msj_in );
+	/*
 	fgets( mensaje_enviar , TAM , stdin );
 		mensaje_enviar[ strlen( mensaje_enviar ) - 1 ] = '\0';
 	Error_int( Sockets_Enviar_mensaje_TCP( sockfdTCP ,
 										   mensaje_enviar ) ,
 			   SI );
+	*/
+
+Error_int( Sockets_Enviar_mensaje_TCP( sockfdTCP , "root" ) , SI );
+
 	msj_in_long = Sockets_Leer_mensaje_largo_TCP_FREE( sockfdTCP );
 	Error_pnt( msj_in_long , SI );
 	printf( "\n %s\n" , msj_in_long );
@@ -163,7 +168,7 @@ void Imprimir_prompt( )
 
 int Establecer_conexion( )
 {
-	
+	/*
 	char comando[TAM];
 	char connect[7];
 	char datos_de_conexion[TAM - 7];
@@ -171,11 +176,12 @@ int Establecer_conexion( )
 	char usuario[22];
 	char ip[15];
 	int port;
+	*/
 	int sockfd;
 	
 	do
 	{
-		
+		/*
 		do
 		{
 		
@@ -217,10 +223,18 @@ int Establecer_conexion( )
 				 || strcmp( vacio , "" ) );
 		
 		sockfd = Conectar_con_el_servidor( ip , port );
-		
+		*/
+
+sockfd = Conectar_con_el_servidor( "127.0.0.1" , 6020 );
+
 	} while( sockfd < 0 );
 	
+	/*
 	sprintf( prompt , "%s@%s:" , usuario , ip );
+	*/
+
+sprintf( prompt , "%s@%s:" , "root" , "127.0.0.1" );
+
 	
 	return sockfd;
 	
