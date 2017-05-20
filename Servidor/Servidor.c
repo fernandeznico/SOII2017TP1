@@ -303,7 +303,8 @@ char * Corregir_simbolos_FREE( char * cadena )
 	int correcciones = Cantidad_de_simbolos( cadena );
 	
 	char * cadena_corregida;
-	cadena_corregida = malloc( strlen( cadena ) + correcciones );
+	cadena_corregida = Mem_Create_string( strlen( cadena )
+										  + correcciones );
 	
 	correcciones = 0;
 	
@@ -336,8 +337,6 @@ char * Corregir_simbolos_FREE( char * cadena )
 		
 	}
 	
-	cadena_corregida[strlen( cadena_corregida )] = '\0';
-	
 	return cadena_corregida;
 	
 }
@@ -368,7 +367,6 @@ text * Cabecera_FREE( )
 	{
 		
 		char * str = String_Cortar_hasta_FREE( &linea3 , "," );
-		printf( "\n CABECERA: pos_cab = %u | str = %s" , pos_cab , str );
 		cabecera->t[pos_cab] = Mem_Create_string( strlen( str ) );
 		strcpy( cabecera->t[pos_cab] , str );
 		
@@ -518,14 +516,10 @@ char * Listar_FREE( )
 		if( cabecera == NULL )
 			return String_Crear( "Base de datos perdida." );
 	
-	Print_text_all_parts( cabecera );
-	
 	text * estaciones;
 	estaciones = Estaciones_FREE( );
 		if( estaciones == NULL )
 			return String_Crear( "Base de datos perdida." );
-	
-	Print_text_all_parts( estaciones );
 	
 	///Asigno memoria a la lista
 	unsigned int estacion;
