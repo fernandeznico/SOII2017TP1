@@ -101,6 +101,9 @@ void File_move_to_next_ocurrence_char
 	
 	int pos = File_position_next_character( file , c );
 	
+		if( pos == -1 )
+			return;
+	
 	fseek( file , pos + add , SEEK_CUR );
 	
 }

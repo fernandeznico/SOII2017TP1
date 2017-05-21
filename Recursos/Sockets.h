@@ -17,8 +17,11 @@
 #include <unistd.h> //write , read
 #include <stdlib.h> //atoi
 #include <arpa/inet.h> //inet_aton
+#include <ifaddrs.h> //getifaddrs freeifaddrs
 
 #include "File.h"
+
+#define TEST_SOCKETS_H 1
 
 #define TAM 256
 
@@ -29,7 +32,64 @@ struct direccion {
 	
 };
 
- 
+/**
+ * @brief Obtiene las diferentes ip de los dispositivos del equipo y las
+ * publica junto con el puerto de comunicación utilizado
+ * 
+ * @param puerto: Número de puerto para la conexión
+ * @return -1 si hubo fallo 0 si no.
+ */
+int Sockets_Imprimir_conexiones_disponibles( int puerto )
+{
+	
+	struct ifaddrs * ifaddr , * ifa;
+	int s, n;
+	char host[NI_MAXHOST];
+	
+	if( getifaddrs( &ifaddr ) == -1 )
+	{
+		
+		fprintf( stderr ,
+				"ERROR: No se encuentran dispositivos de red \
+				(getifaddrs)" );
+		return -1;
+		
+	}
+	
+	for(ifa = ifaddr , n = 0 ; ifa != NULL ; ifa = ifa->ifa_next , n++)
+	{
+		
+		if( ifa->ifa_addr == NULL )
+			continue;
+		
+		if( ifa->ifa_addr->sa_family != AF_INET )
+			continue;
+		
+		s = getnameinfo( ifa->ifa_addr ,
+						 sizeof(struct sockaddr_in) ,
+						 host ,
+						 NI_MAXHOST ,
+						 NULL ,
+						 0 ,
+						 NI_NUMERICHOST );
+			if (s != 0) {
+				fprintf( stderr ,
+						"ERROR: No se pudo leer dispositivo de red \
+							(getnameinfo: %s )" ,
+						 gai_strerror(s) );
+				return -1;
+			}
+		
+		printf("\n %-8s\t%s:%d", ifa->ifa_name , host , puerto);
+		
+	}
+	
+	freeifaddrs(ifaddr);
+	
+	return 0;
+	
+}
+
 /**
  * @brief Controla que el host solicitado sea posible
  * 
@@ -441,6 +501,7 @@ int Sockets_Leer_mensaje_TCP( int sockfd , char buffer[] , int tamanio )
 		}
 	
 	return 0;
+	
 }
 
 /**
@@ -454,13 +515,23 @@ char * Sockets_Leer_mensaje_largo_TCP_FREE( int sockfd )
 	if( Sockets_Leer_mensaje_TCP( sockfd , tamanio , TAM ) )
 		return NULL;
 	
-	int tam = 0;
-	sscanf( tamanio , "%i" , &tam );
-	char * mensaje_largo = (char *)Mem_assign( tam * sizeof(char) );
+	unsigned int tam = 0;
+	sscanf( tamanio , "%u" , &tam );
+	if( tam == 0 )
+		return NULL;
+	char * mensaje_largo = Mem_Create_string( tam );
 	if( Sockets_Leer_mensaje_TCP( sockfd , mensaje_largo , tam ) )
 		return NULL;
 	
-	mensaje_largo[tam] = '\0';
+	/*
+	static unsigned int vez = 0;
+	vez++;
+	printf( "\n [%u]tamanio=%s|tam=%u|mensaje_largo=%s|" , vez
+														 , tamanio
+														 , tam
+														 , mensaje_largo
+														 );
+	*/
 	
 	return mensaje_largo;
 	
@@ -495,15 +566,19 @@ int Sockets_Enviar_mensaje_TCP( int sockfdTCP , char * mensaje )
 int Sockets_Enviar_mensaje_largo_TCP( int sockfdTCP , char * mensaje )
 {
 	
-	unsigned int tam_mensaje = strlen(mensaje) + 1;
+	unsigned int tam_mensaje = strlen(mensaje);
 	
-	char tamanio[TAM];
-	memset( tamanio , '-' , TAM );
+	char * tamanio = Mem_Create_string_set( TAM , '-' );
 	sprintf( tamanio , "%i" , tam_mensaje );
 	tamanio[ strlen(tamanio) ] = '-';
 	
-	Sockets_Enviar_mensaje_TCP( sockfdTCP , tamanio );
-	
+	if( Sockets_Enviar_mensaje_TCP( sockfdTCP , tamanio ) == -1 )
+		return -1;
+	/*
+	static unsigned int vez = 0;
+	vez++;
+	printf( "\n [%u]tamanio=%s|mensaje=%s" , vez , tamanio , mensaje );
+	*/
 	return Sockets_Enviar_mensaje_TCP( sockfdTCP , mensaje );
 	
 }
@@ -694,5 +769,108 @@ int mostrar_porcentaje;
 	return 0;
 	
 }
+
+#if TEST_MEM_H
+
+void Sockets_Test_Server()
+{
+	
+	int servidor = 0;
+	int puerto = 6020;
+	
+	Sockets_Crear_Socket_INET_TCP( &servidor , &puerto );
+	
+	int conexion;
+	struct direccion dir;
+	struct sockaddr_in cli_addr;
+	printf("\n Servidor disponible y a la espera de una conexión.");
+	Sockets_Imprimir_conexiones_disponibles( puerto );
+	fflush( stdout );
+	Sockets_Aceptar_un_cliente( &conexion ,
+								 servidor ,
+								 cli_addr ,
+								&dir );
+	printf( "\n Conectado a: %s:%d " , dir.ip , dir.puerto );
+	printf( "\n" );
+	
+	unsigned int pruebas = 21;
+	unsigned int prueba;
+	for( prueba = 1 ; prueba < pruebas + 1 ; prueba++ )
+	{
+		
+		char * msj = Mem_Create_string( prueba );
+		unsigned int pos;
+		for( pos = 0 ; pos < prueba ; pos++ )
+			msj[pos] = 'a' + pos;
+		if( Sockets_Enviar_mensaje_largo_TCP( conexion , msj ) == -1 )
+			printf( " ----ERROR----" );
+		Mem_desassign( (void **)&msj );
+		
+		
+	}
+	
+	if( Sockets_Enviar_mensaje_largo_TCP( conexion , "%FIN" ) == -1 )
+		printf( " ----ERROR----" );
+	
+}
+
+void Sockets_Test_Client()
+{
+	
+	char * ip = "127.0.0.1";
+	struct hostent * server = Sockets_Verificar_host_IPv4( ip );
+		if( server == NULL )
+			printf( "\n IP mala" );
+	
+	int sockfdTCP = Sockets_Crear_Y_Conectar_Socket_INET_TCP( server ,
+															  6020 );
+		if( sockfdTCP == 0 )
+			printf( "\n Fallo al conectar" );
+
+	printf( "\n Conexión establecida con el servidor AWS (%s:%i)" ,
+			 ip ,
+			 6020 );
+	
+	while(1)
+	{
+		
+		char * msj = Sockets_Leer_mensaje_largo_TCP_FREE( sockfdTCP );
+		if( msj == NULL )
+			{ printf( " ----ERROR----" ); return; }
+		if( strcmp( msj , "%FIN" ) == 0 )
+			return;
+		printf( "\n msj=%s" , msj );
+		Mem_desassign( (void **)&msj );
+		
+	}
+	
+}
+
+int Sockets_Test_main( int argc, char **argv )
+{
+	
+	if( argc != 2 )
+		return 0;
+	
+	switch( argv[1][0] )
+	{
+		
+		case 's':
+			Sockets_Test_Server();
+			break;
+		
+		case 'c':
+			Sockets_Test_Client();
+			break;
+		
+	}
+	
+	printf( "\n" );
+	
+	return 0;
+	
+}
+
+#endif //TEST
 
 #endif

@@ -15,17 +15,6 @@
 #include "../Recursos/Error.h"
 #include "../Recursos/String.h"
 
-#include <ifaddrs.h>
-
-/**
- * @brief Obtiene las diferentes ip de los dispositivos del equipo y las
- * publica junto con el puerto de comunicación utilizado
- * 
- * @param puerto: Número de puerto para la conexión
- * @return -1 si hubo fallo 0 si no.
- */
-int Imprimir_conexiones_disponibles( int puerto );
-
 /**
  * @brief Se pone a la espera de un cliente y en caso de uno acepta la
  * conexión y crea la conexión UDP para paso de archivos
@@ -74,7 +63,7 @@ int main( int argc , char **argv )
 	
 	Error_int( Sockets_Crear_Socket_INET_TCP( &servidor , &puerto ) ,
 			   SI );
-	Error_int( Imprimir_conexiones_disponibles( puerto ) , NO );
+	Error_int( Sockets_Imprimir_conexiones_disponibles( puerto ) , NO );
 	
 	char mensaje_enviar[TAM];
 	memset( mensaje_enviar , '\0' , TAM );
@@ -124,9 +113,9 @@ int main( int argc , char **argv )
 						   "ecipitación (no_día: acumnulado mm).\n"
 						   "\t- promedio variable: muestra el promedio "
 						   "de todas las muestras de la variable de ca"
-						   "da estación (no_estacion: promedio.\n"
+						   "da estación (no_estacion: promedio).\n"
 						   "\t- desconectar: termina la sesión del usua"
-						   "rio.\1n" );
+						   "rio.\n" );
 					
 				}
 				else
@@ -164,57 +153,6 @@ int main( int argc , char **argv )
 	close( servidor );
 	
 	return EXIT_SUCCESS;
-	
-}
-
-int Imprimir_conexiones_disponibles( int puerto )
-{
-	
-	struct ifaddrs * ifaddr , * ifa;
-	int s, n;
-	char host[NI_MAXHOST];
-	
-	if( getifaddrs( &ifaddr ) == -1 )
-	{
-		
-		fprintf( stderr ,
-				"ERROR: No se encuentran dispositivos de red \
-				(getifaddrs)" );
-		return -1;
-		
-	}
-	
-	for(ifa = ifaddr , n = 0 ; ifa != NULL ; ifa = ifa->ifa_next , n++)
-	{
-		
-		if( ifa->ifa_addr == NULL )
-			continue;
-		
-		if( ifa->ifa_addr->sa_family != AF_INET )
-			continue;
-		
-		s = getnameinfo( ifa->ifa_addr ,
-						 sizeof(struct sockaddr_in) ,
-						 host ,
-						 NI_MAXHOST ,
-						 NULL ,
-						 0 ,
-						 NI_NUMERICHOST );
-			if (s != 0) {
-				fprintf( stderr ,
-						"ERROR: No se pudo leer dispositivo de red \
-							(getnameinfo: %s )" ,
-						 gai_strerror(s) );
-				return -1;
-			}
-		
-		printf("\n %-8s\t%s:%d", ifa->ifa_name , host , puerto);
-		
-	}
-	
-	freeifaddrs(ifaddr);
-	
-	return 0;
 	
 }
 
@@ -594,6 +532,7 @@ char * Listar_FREE( )
 	
 }
 
+///@bug "ERROR: No se puede leer el mensaje. (UDP)" --> (Igual funciona)
 char * Descargar
 ( char * nro_estacion , int sockfdUDP , struct sockaddr_in addrUDP )
 {
@@ -655,13 +594,12 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 		if( bd == NULL )
 			return String_Crear( "Base de datos perdida" );
 	
-	char ** retorno = (char **)malloc( 31 * sizeof(char *) );
+	text * retorno = (text *)Mem_Create_text_null( 32 );
 	char cabecera[] = "\tDia\tAcumulado[mm]";
-	///@todo posible problema al desalojar la memoria !!!
-	retorno[0] = cabecera;
+	retorno->t[0] = Mem_Create_string( strlen( cabecera ) );
+	strcpy( retorno->t[0] , cabecera );
 	unsigned int retorno_dia = 1;
-	unsigned int tam_retorno_cadena = 0;
-	tam_retorno_cadena += strlen( cabecera ) + 1;
+	unsigned int tam_retorno_cadena = strlen( cabecera ) + 1;
 	
 	///Recorro t'odo el archivo de datos (a partir de la 4ta fila)
 	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
@@ -682,7 +620,7 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 															  "," );
 		if( strcmp( nro_estacion , nro_estacion_linea ) == 0 )
 		{
-			///@todo memoria
+			
 			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
 			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
 			char * fecha = String_Cortar_hasta_FREE( &linea , "," );
@@ -718,7 +656,7 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 				strcat( retorno_fila , "\t" );
 				strcat( retorno_fila , prec_acum_str );
 				Mem_desassign( (void **)&prec_acum_str );
-				retorno[retorno_dia++] = retorno_fila;
+				retorno->t[retorno_dia++] = retorno_fila;
 				tam_retorno_cadena += strlen( retorno_fila ) + 1;
 				
 				strcpy( ultimo_dia , dia );
@@ -735,20 +673,17 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 	}
 	
 	///Paso el retorno a una sola cadena
-	char * retorno_cadena = Mem_assign( tam_retorno_cadena );
-	retorno_cadena[0] = '\0';
+	char * retorno_cadena = Mem_Create_string( tam_retorno_cadena );
 	unsigned int pos;
 	for( pos = 0 ; pos < retorno_dia ; pos++ )
 	{
 		
-		strcat( retorno_cadena , retorno[pos] );
+		strcat( retorno_cadena , retorno->t[pos] );
 		strcat( retorno_cadena , "\n" );
-		///@todo text struct
-		Mem_desassign( (void **)&(retorno[pos]) );
 		
 	}
-	///@todo text struct
-	Mem_desassign( (void **)&retorno );
+	
+	Mem_Delete_text( &retorno );
 	
 	return retorno_cadena;
 	
@@ -771,6 +706,8 @@ char * Comando_FREE
 			char * orden = String_Cortar_hasta_FREE( &cmd_cut , " " );
 				if( orden == NULL )
 					break;
+				if( cmd_cut == NULL )
+					return String_Crear( "Faltan argumentos" );
 			if( strcmp( orden , "descargar" ) == 0 )
 			{
 				
@@ -785,7 +722,8 @@ char * Comando_FREE
 			{
 				
 				Mem_desassign( (void **)&orden );
-				return Diario_precipitacion_FREE( cmd_cut );
+				char * rtrn = Diario_precipitacion_FREE( cmd_cut );
+				return rtrn;
 				
 			}
 			break;

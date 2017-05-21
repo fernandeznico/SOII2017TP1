@@ -20,9 +20,8 @@
 char * String_Crear( char * cadena )
 {
 	
-	char * retorno = (char *)Mem_assign( strlen( cadena ) );
+	char * retorno = Mem_Create_string( strlen( cadena ) );
 	strcpy( retorno , cadena );
-	retorno[strlen( retorno )] = '\0';
 	return retorno;
 	
 }
@@ -193,7 +192,8 @@ char * String_Cortar_hasta_FREE( char ** cadena , char * caracteres )
 		if( pos == -1 )
 		{
 			
-			char * copia = (char *)Mem_assign( strlen( *cadena ) );
+			char * copia;
+			copia = (char *)Mem_Create_string( strlen(*cadena) );
 			strcpy( copia , *cadena );
 			*cadena = NULL;
 			return copia;
