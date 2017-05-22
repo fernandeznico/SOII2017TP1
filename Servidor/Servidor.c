@@ -587,7 +587,7 @@ char * Descargar
 	
 }
 
-char * Diario_precipitacion_FREE( char * nro_estacion )
+char * Precipitacion_FREE( char * nro_estacion , char caso )
 {
 	
 	FILE * bd = fopen( "datos_meteorologicos.CSV" , "r" );
@@ -595,13 +595,13 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 			return String_Crear( "Base de datos perdida" );
 	
 	text * retorno = (text *)Mem_Create_text_null( 32 );
-	char cabecera[] = "\tDia\tAcumulado[mm]";
+	char cabecera[] = "\tDia\t\tAcumulado[mm]\n\n";
 	retorno->t[0] = Mem_Create_string( strlen( cabecera ) );
 	strcpy( retorno->t[0] , cabecera );
-	unsigned int retorno_dia = 1;
+	retorno->parts = 1;
 	unsigned int tam_retorno_cadena = strlen( cabecera ) + 1;
 	
-	///Recorro t'odo el archivo de datos (a partir de la 4ta fila)
+	///Recorro el archivo de datos completo (a partir de la 4ta fila)
 	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
 	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
 	File_move_to_next_ocurrence_char( bd , 13 , /*add =*/ 1 );
@@ -609,6 +609,7 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 	memset( ultimo_dia , '\0' , 3 );
 	float precipitacion_acum = 0;
 	int tam_bd = File_size( bd );
+	float prec_mes = 0;
 	while( ftell( bd ) != tam_bd )
 	{
 		
@@ -623,10 +624,10 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 			
 			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
 			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
-			char * fecha = String_Cortar_hasta_FREE( &linea , "," );
-			char * fecha_mem = fecha;
-			char * dia = String_Cortar_hasta_FREE( &fecha , "/" );
-			Mem_desassign( (void **)&fecha_mem );
+			char * fechayhora = String_Cortar_hasta_FREE(&linea , ",");
+			char * fechayhora_mem = fechayhora;
+			char * dia = String_Cortar_hasta_FREE(&fechayhora , " ");
+			Mem_desassign( (void **)&fechayhora_mem );
 			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
 			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
 			String_Mover_hasta( &linea , "," , /*add =*/ 1 );
@@ -642,9 +643,10 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 			else
 			{
 				
+				prec_mes += precipitacion_acum;
 				char * prec_acum_str;
 				prec_acum_str = String_Flotante_a_cadena_FREE(
-											precipitacion_acum );
+												precipitacion_acum );
 				precipitacion_acum = precipitacion;
 				char * retorno_fila;
 				retorno_fila = Mem_assign( strlen( prec_acum_str )
@@ -655,8 +657,9 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 				strcat( retorno_fila , ultimo_dia );
 				strcat( retorno_fila , "\t" );
 				strcat( retorno_fila , prec_acum_str );
+				strcat( retorno_fila , "\n" );
 				Mem_desassign( (void **)&prec_acum_str );
-				retorno->t[retorno_dia++] = retorno_fila;
+				retorno->t[retorno->parts++] = retorno_fila;
 				tam_retorno_cadena += strlen( retorno_fila ) + 1;
 				
 				strcpy( ultimo_dia , dia );
@@ -672,20 +675,30 @@ char * Diario_precipitacion_FREE( char * nro_estacion )
 		
 	}
 	
-	///Paso el retorno a una sola cadena
-	char * retorno_cadena = Mem_Create_string( tam_retorno_cadena );
-	unsigned int pos;
-	for( pos = 0 ; pos < retorno_dia ; pos++ )
+	text * rtrn;
+	switch( caso )
 	{
 		
-		strcat( retorno_cadena , retorno->t[pos] );
-		strcat( retorno_cadena , "\n" );
+		case 'd':
+			return Mem_Copy_text_into_string_and_delete_text(&retorno);
+			
+		case 'm':
+			rtrn = Mem_Create_text_null( 6 );
+			rtrn->t[0] = String_Crear( "\tMes\t\tAcumulado[mm]\n\n" );
+			rtrn->t[1] = String_Crear( "\t" );
+			char * mes = retorno->t[1];
+			String_Mover_hasta( &mes , "/" , 1 );
+			rtrn->t[2] = String_Cortar_hasta_FREE( &mes , "\t" );
+			rtrn->t[3] = String_Crear( "\t\t" );
+			rtrn->t[4] = String_Flotante_a_cadena_FREE( prec_mes );
+			rtrn->t[5] = String_Crear( "\n" );
+			Mem_Delete_text( &retorno );
+			return Mem_Copy_text_into_string_and_delete_text( &rtrn );
+			
 		
 	}
 	
-	Mem_Delete_text( &retorno );
-	
-	return retorno_cadena;
+	return NULL;
 	
 }
 
@@ -694,6 +707,7 @@ char * Comando_FREE
 {
 	
 	char * cmd_cut = comando;
+	char * orden;
 	switch( cmd_cut[0] )
 	{
 		
@@ -703,11 +717,11 @@ char * Comando_FREE
 				return String_Crear( "Desconexión recibida." );
 			
 			///Comprobar 'descargar' o 'diario_precipitacion'
-			char * orden = String_Cortar_hasta_FREE( &cmd_cut , " " );
+			orden = String_Cortar_hasta_FREE( &cmd_cut , " " );
 				if( orden == NULL )
 					break;
 				if( cmd_cut == NULL )
-					return String_Crear( "Faltan argumentos" );
+					break;
 			if( strcmp( orden , "descargar" ) == 0 )
 			{
 				
@@ -717,12 +731,11 @@ char * Comando_FREE
 												addrUDP )
 									);
 			}
-			if( strcmp( orden , "diario_precipitacion" ) == 0
-				|| strcmp( orden , "diario_precipitación" ) == 0 )
+			if( strcmp( orden , "diario_precipitacion" ) == 0 )
 			{
 				
 				Mem_desassign( (void **)&orden );
-				char * rtrn = Diario_precipitacion_FREE( cmd_cut );
+				char * rtrn = Precipitacion_FREE( cmd_cut , 'd' );
 				return rtrn;
 				
 			}
@@ -733,6 +746,18 @@ char * Comando_FREE
 			if( strcmp( cmd_cut , "listar" ) == 0 )
 				return Listar_FREE( );
 			break;
+			
+		case 'm':
+			
+			orden = String_Cortar_hasta_FREE( &cmd_cut , " " );
+				if( orden == NULL )
+					break;
+				if( cmd_cut == NULL )
+					break;
+			if( strcmp( orden , "mensual_precipitacion" ) == 0 )
+				return Precipitacion_FREE( cmd_cut , 'm' );
+			break;
+			
 		
 	}
 	
